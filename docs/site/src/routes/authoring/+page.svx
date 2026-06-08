@@ -1,0 +1,79 @@
+---
+title: Authoring Scenarios
+description: How to write declarative YAML conformance scenarios.
+---
+
+<div class="eyebrow">Guide • Scenarios</div>
+
+# Authoring Scenarios
+
+Scenarios are declarative YAML files. Each scenario has:
+
+- **Metadata** — id, title, version, spec references, required capabilities
+- **Partner config** — which test partner to use
+- **Steps** — ordered sequence of actions with assertions
+
+## Structure
+
+```yaml
+id: auth.auth_code_pkce_happy_path
+title: "Auth code + PKCE happy path"
+version: "0.1"
+spec_refs:
+  - rfc6749
+  - rfc7636
+capabilities:
+  required:
+    - oauth.auth_code_pkce
+partner:
+  type: mcp_auth_test_server
+steps:
+  - id: discover
+    type: client_request
+    action: oauth.discover
+    assert:
+      - type: status
+        expected: 200
+  - id: register
+    type: client_request
+    action: oauth.dcr.register
+    request:
+      json:
+        client_name: "mcp-conformance test"
+        redirect_uris: ["http://127.0.0.1:9876/callback"]
+        grant_types: ["authorization_code"]
+        token_endpoint_auth_method: "none"
+    assert:
+      - type: status
+        expected: [200, 201]
+      - type: response_contains_keys
+        expected: [client_id]
+```
+
+## Step Types
+
+| Type | Purpose |
+|---|---|
+| `client_request` | Drive a client-like HTTP action |
+| `inject_fault` | Configure partner fault injection |
+| `wait` | Sleep for async behavior |
+| `log_debug` | Pull debug state into trace |
+
+## Action Types
+
+| Action | Endpoint | Method |
+|---|---|---|
+| `oauth.discover` | `/.well-known/oauth-authorization-server` | GET |
+| `oauth.dcr.register` | `/register` | POST |
+| `oauth.auth_code.authorize` | `/authorize` | GET (query params) |
+| `oauth.token.exchange` | `/token` | POST |
+| `partner.health` | `/health` | GET |
+| `mcp.request` | `/mcp/oauth` | POST |
+| `test.tokens.mint_expired` | `/test/tokens/expired` | POST |
+| `test.reset` | `/test/reset` | POST |
+| `test.state` | `/test/state` | GET |
+| `test.faults.configure` | `/test/faults` | POST |
+
+## Assertion Types
+
+See [Reports](/reports/) for the full assertion catalog.

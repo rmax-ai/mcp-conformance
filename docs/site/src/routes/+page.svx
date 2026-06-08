@@ -1,0 +1,92 @@
+---
+title: Protocol testing, declared in YAML
+description: Scenario-driven conformance testing for MCP client and server implementations.
+---
+
+<div class="eyebrow">MCP • JSON-RPC • OAuth • DCR • CIMD</div>
+
+# Protocol testing,
+# declared in YAML
+
+<p class="hero-note">
+  <strong>mcp-conformance</strong> is a scenario-driven test runner that verifies
+  MCP implementations against the protocol specification. It runs declarative
+  YAML scenarios against configurable test partners and produces structured
+  pass/fail reports suitable for CI gates and enterprise audit evidence.
+</p>
+
+<div class="panel-grid">
+  <article class="panel-card">
+    <h3>Declarative scenarios</h3>
+    <p>
+      Describe actors, steps, inputs, and assertions in YAML. No pytest code
+      required for standard conformance coverage.
+    </p>
+  </article>
+  <article class="panel-card">
+    <h3>Raw wire visibility</h3>
+    <p>
+      Every step captures the full HTTP request/response, JSON-RPC message,
+      redirect chain, and elapsed time. Failures come with evidence.
+    </p>
+  </article>
+  <article class="panel-card">
+    <h3>Swappable partners</h3>
+    <p>
+      Default partner is mcp-auth-test-server. Third-party adapters can target
+      any MCP server. Plug in and run the same scenario catalog.
+    </p>
+  </article>
+</div>
+
+## Quick start
+
+```bash
+# Clone and install
+git clone https://github.com/rmax-ai/mcp-conformance.git
+cd mcp-conformance
+uv sync --dev
+
+# Run unit tests
+uv run pytest tests/unit/ -v
+
+# Run the full scenario suite (requires mcp-auth-test-server)
+mcp-conformance run
+```
+
+## Why mcp-conformance?
+
+MCP implementations are proliferating across clients, SDKs, gateways, and
+hosted servers. There is no shared mechanism to verify whether a client handles
+the full authorization path, whether a server returns spec-shaped JSON-RPC
+errors, or whether an OAuth server validates PKCE correctly.
+
+mcp-conformance solves this with:
+
+- **25 MVP scenarios** covering OAuth Auth Code + PKCE, DCR, CIMD, MCP protocol,
+  and error/edge cases
+- **Assertion library** across HTTP, JSON-RPC, OAuth, PKCE, DCR, CIMD, and wire
+  layers
+- **Canonical JSON reports** with scenario IDs, spec references, artifact
+  versions, and failure evidence
+- **CI gate** for platform teams certifying servers before onboarding
+
+## Architecture
+
+```
+scenarios/ (YAML)  →  Scenario Runner  →  Partner Adapter  →  Test Server
+                             ↓
+                    Assertion Library
+                             ↓
+                      JSON Report
+```
+
+- **Scenarios** — declarative YAML defining metadata, steps, and assertions
+- **Runner** — loads scenarios, executes steps, captures wire traces, evaluates assertions
+- **Partner Adapter** — abstraction over the system under test (mcp-auth-test-server by default)
+- **Assertion Library** — HTTP status, headers, JSON body, JSON-RPC schema, OAuth specifics
+- **Reporter** — JSON, Markdown, and JUnit XML output formats
+
+## License
+
+MIT

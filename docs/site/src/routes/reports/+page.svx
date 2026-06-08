@@ -1,0 +1,52 @@
+---
+title: Report Formats
+description: Output formats for conformance test results.
+---
+
+<div class="eyebrow">Format • Reports</div>
+
+# Report Formats
+
+mcp-conformance produces reports in three formats:
+
+## Reports
+
+### JSON (canonical)
+
+Machine-readable output with scenario IDs, step traces, assertion results,
+and timing.
+
+```bash
+mcp-conformance run json
+```
+
+### Markdown (human-readable)
+
+Console-friendly summary with pass/fail per scenario and step-level errors.
+
+```bash
+mcp-conformance run
+```
+
+### JUnit XML (CI)
+
+CI-friendly format compatible with GitHub Actions, Jenkins, and other CI systems.
+
+## Exit Codes
+
+| Code | Meaning |
+|---|---|
+| 0 | All selected scenarios passed |
+| 1 | One or more scenarios failed |
+| 2 | Configuration error |
+| 3 | Partner unavailable |
+
+## Assertion Catalog
+
+**HTTP layer:** status, header, header_absent, content_type, body_json_path, redirect_location_contains
+
+**JSON-RPC layer:** jsonrpc_version, result_exists, result_shape, error_code, error_message
+
+**OAuth layer:** token_type, response_contains_keys, scope_contains
+
+**Wire layer:** header, header_absent, content_type, redirect_location_contains

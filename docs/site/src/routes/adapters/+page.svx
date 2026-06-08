@@ -1,0 +1,49 @@
+---
+title: Partner Adapters
+description: How to write custom partner adapters for MCP servers.
+---
+
+<div class="eyebrow">Guide • Adapters</div>
+
+# Partner Adapters
+
+A partner adapter translates generic scenario operations into the concrete API
+of the system under test.
+
+## Built-in Adapters
+
+### mcp-auth-test-server
+
+The default adapter connects to mcp-auth-test-server. It knows how to call
+OAuth discovery, DCR registration, authorization, token exchange, MCP JSON-RPC,
+debug, and test endpoints.
+
+```bash
+mcp-conformance run --partner mcp-auth-test-server --base-url http://127.0.0.1:8765
+```
+
+### Generic MCP Server
+
+A minimal adapter for any MCP server exposing JSON-RPC over HTTP.
+
+```bash
+mcp-conformance run --partner generic-mcp --base-url http://127.0.0.1:8080
+```
+
+## Writing Custom Adapters
+
+Implement the `TestPartner` ABC:
+
+```python
+from mcp_conformance.partners.base import (
+    AuthStep, FaultConfig, MCPResponse, TestPartner
+)
+
+class MyCustomAdapter(TestPartner):
+    async def health(self) -> bool: ...
+    async def send_mcp_request(self, method, params, *, auth, headers, endpoint) -> MCPResponse: ...
+    async def send_auth_request(self, step: AuthStep) -> MCPResponse: ...
+    async def reset_state(self) -> None: ...
+    async def get_debug_state(self, endpoint: str) -> dict: ...
+    async def configure_injection(self, fault: FaultConfig) -> None: ...
+```
