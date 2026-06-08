@@ -1,0 +1,32 @@
+# ── Git ──
+.git/
+.gitignore
+
+# ── Python ──
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# ── Node / Docs site ──
+docs/site/node_modules/
+docs/site/build/
+docs/site/.svelte-kit/
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+
+# ── IDE ──
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Other ──
+.env
+*.egg-info/
+dist/
