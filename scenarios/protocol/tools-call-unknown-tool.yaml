@@ -1,0 +1,24 @@
+id: protocol.tools_call_unknown_tool
+title: "tools/call with unknown tool returns JSON-RPC error"
+version: "0.1"
+spec_refs:
+  - mcp.tools
+  - jsonrpc.2_0
+capabilities:
+  required:
+    - mcp.tools
+partner:
+  type: generic_mcp_server
+steps:
+  - id: call_unknown_tool
+    type: client_request
+    action: mcp.request
+    request:
+      method: tools/call
+      params:
+        name: "nonexistent_tool_xyz"
+        arguments: {}
+    assert:
+      - type: jsonrpc_version
+      - type: error_code
+        expected: -32602

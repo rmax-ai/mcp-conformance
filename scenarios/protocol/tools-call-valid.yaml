@@ -1,5 +1,5 @@
-id: protocol.tools_list_schema
-title: "tools/list returns valid MCP JSON-RPC result shape"
+id: protocol.tools_call_valid
+title: "tools/call with valid tool name and params"
 version: "0.1"
 spec_refs:
   - mcp.tools
@@ -10,15 +10,15 @@ capabilities:
 partner:
   type: generic_mcp_server
 steps:
-  - id: list_tools
+  - id: call_valid_tool
     type: client_request
     action: mcp.request
     request:
-      method: tools/list
-      params: {}
+      method: tools/call
+      params:
+        name: "echo"
+        arguments:
+          message: "hello"
     assert:
       - type: jsonrpc_version
       - type: result_exists
-      - type: result_shape
-        expected:
-          - tools

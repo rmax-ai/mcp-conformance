@@ -1,0 +1,41 @@
+id: errors.expired_token_returns_401
+title: "Expired access token returns 401 with bearer challenge"
+version: "0.1"
+spec_refs:
+  - rfc6750
+  - mcp.authorization
+capabilities:
+  required:
+    - oauth.bearer
+    - test.expired_token_minting
+partner:
+  type: mcp_auth_test_server
+steps:
+  - id: mint_expired
+    type: client_request
+    action: test.tokens.mint_expired
+    request:
+      json:
+        subject: "test-user"
+        scope: "mcp:tools:read"
+        audience: "http://127.0.0.1:8765/mcp/oauth"
+    assert:
+      - type: status
+        expected: 201
+      - type: response_contains_keys
+        expected:
+          - access_token
+          - token_type
+  - id: call_with_expired_token
+    type: client_request
+    action: mcp.request
+    auth:
+      bearer_token:
+        from_step: mint_expired
+        path: "$.access_token"
+    request:
+      method: tools/list
+      params: {}
+    assert:
+      - type: status
+        expected: 401

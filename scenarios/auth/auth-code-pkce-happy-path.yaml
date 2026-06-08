@@ -17,3 +17,36 @@ steps:
     assert:
       - type: status
         expected: 200
+  - id: register
+    type: client_request
+    action: oauth.dcr.register
+    request:
+      json:
+        client_name: "mcp-conformance pkce test"
+        redirect_uris:
+          - "http://127.0.0.1:9876/callback"
+        grant_types:
+          - authorization_code
+        response_types:
+          - code
+        token_endpoint_auth_method: "none"
+    assert:
+      - type: status
+        expected: [200, 201]
+      - type: response_contains_keys
+        expected:
+          - client_id
+  - id: authorize
+    type: client_request
+    action: oauth.auth_code.authorize
+    request:
+      params:
+        response_type: "code"
+        client_id: "test-client"
+        redirect_uri: "http://127.0.0.1:9876/callback"
+        code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+        code_challenge_method: "S256"
+        state: "xyz789"
+    assert:
+      - type: status
+        expected: [200, 302]

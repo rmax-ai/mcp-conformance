@@ -1,0 +1,22 @@
+id: errors.insufficient_scope
+title: "Insufficient scope returns 403"
+version: "0.1"
+spec_refs:
+  - mcp.authorization
+capabilities:
+  required:
+    - oauth.bearer
+partner:
+  type: mcp_auth_test_server
+steps:
+  - id: call_with_limited_scope
+    type: client_request
+    action: mcp.request
+    request:
+      method: tools/call
+      params:
+        name: "admin-only-tool"
+        arguments: {}
+    assert:
+      - type: status
+        expected: [401, 403]

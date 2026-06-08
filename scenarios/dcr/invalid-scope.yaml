@@ -1,0 +1,26 @@
+id: dcr.invalid_scope
+title: "DCR with unsupported scope rejected"
+version: "0.1"
+spec_refs:
+  - rfc7591
+capabilities:
+  required:
+    - oauth.dcr
+partner:
+  type: mcp_auth_test_server
+steps:
+  - id: register_bad_scope
+    type: client_request
+    action: oauth.dcr.register
+    request:
+      json:
+        client_name: "scope test client"
+        redirect_uris:
+          - "http://127.0.0.1:9876/callback"
+        grant_types:
+          - authorization_code
+        token_endpoint_auth_method: "none"
+        scope: "nonexistent:scope:all"
+    assert:
+      - type: status
+        expected: 400

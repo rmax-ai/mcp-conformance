@@ -1,26 +1,25 @@
-id: cimd.happy_path
-title: "CIMD URL as client_id happy path"
+id: cimd.mismatched_client_id
+title: "CIMD metadata with mismatched client_id"
 version: "0.1"
 spec_refs:
   - draft.cimd
-  - mcp.authorization
 capabilities:
   required:
     - oauth.cimd
 partner:
   type: mcp_auth_test_server
 steps:
-  - id: cimd_auth_request
+  - id: cimd_mismatched
     type: client_request
     action: oauth.auth_code.authorize
     request:
       params:
         response_type: "code"
-        client_id: "http://127.0.0.1:8765/test/cimd/valid.json"
+        client_id: "http://127.0.0.1:8765/test/cimd/mismatched.json"
         redirect_uri: "http://127.0.0.1:9876/callback"
         code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
         code_challenge_method: "S256"
-        state: "cimd123"
+        state: "cimd789"
     assert:
       - type: status
-        expected: [200, 302]
+        expected: [400]

@@ -1,0 +1,42 @@
+id: auth.wrong_pkce_verifier
+title: "Wrong PKCE verifier at token exchange"
+version: "0.1"
+spec_refs:
+  - rfc7636
+  - rfc6749
+capabilities:
+  required:
+    - oauth.auth_code_pkce
+partner:
+  type: mcp_auth_test_server
+steps:
+  - id: authorize
+    type: client_request
+    action: oauth.auth_code.authorize
+    request:
+      params:
+        response_type: "code"
+        client_id: "test-client"
+        redirect_uri: "http://127.0.0.1:9876/callback"
+        code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+        code_challenge_method: "S256"
+        state: "abc123"
+    assert:
+      - type: status
+        expected: [200, 302]
+  - id: exchange_wrong_verifier
+    type: client_request
+    action: oauth.token.exchange
+    request:
+      json:
+        grant_type: "authorization_code"
+        code: "test-code"
+        redirect_uri: "http://127.0.0.1:9876/callback"
+        code_verifier: "wrong-verifier-value"
+        client_id: "test-client"
+    assert:
+      - type: status
+        expected: 400
+      - type: body_json_path
+        path: "$.error"
+        expected: "invalid_grant"

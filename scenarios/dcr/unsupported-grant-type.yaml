@@ -1,0 +1,25 @@
+id: dcr.unsupported_grant_type
+title: "DCR with unsupported grant type"
+version: "0.1"
+spec_refs:
+  - rfc7591
+capabilities:
+  required:
+    - oauth.dcr
+partner:
+  type: mcp_auth_test_server
+steps:
+  - id: register_bad_grant
+    type: client_request
+    action: oauth.dcr.register
+    request:
+      json:
+        client_name: "bad grant client"
+        redirect_uris:
+          - "http://127.0.0.1:9876/callback"
+        grant_types:
+          - implicit
+        token_endpoint_auth_method: "none"
+    assert:
+      - type: status
+        expected: 400

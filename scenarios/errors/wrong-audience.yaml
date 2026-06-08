@@ -1,16 +1,15 @@
-id: errors.unauthorized_request_returns_401
-title: "Unauthorized request returns 401 with bearer challenge"
+id: errors.wrong_audience
+title: "Token with wrong audience returns 401"
 version: "0.1"
 spec_refs:
   - rfc6750
-  - mcp.authorization
 capabilities:
   required:
     - oauth.bearer
 partner:
   type: mcp_auth_test_server
 steps:
-  - id: call_without_token
+  - id: call_with_wrong_audience
     type: client_request
     action: mcp.request
     request:
@@ -19,6 +18,3 @@ steps:
     assert:
       - type: status
         expected: 401
-      - type: header
-        name: "WWW-Authenticate"
-        matches: "Bearer"

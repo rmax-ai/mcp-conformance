@@ -1,0 +1,29 @@
+id: dcr.happy_path
+title: "DCR happy path with minimal metadata"
+version: "0.1"
+spec_refs:
+  - rfc7591
+capabilities:
+  required:
+    - oauth.dcr
+partner:
+  type: mcp_auth_test_server
+steps:
+  - id: register_minimal
+    type: client_request
+    action: oauth.dcr.register
+    request:
+      json:
+        client_name: "minimal dcr client"
+        redirect_uris:
+          - "http://127.0.0.1:9876/callback"
+        grant_types:
+          - authorization_code
+        token_endpoint_auth_method: "none"
+    assert:
+      - type: status
+        expected: [200, 201]
+      - type: response_contains_keys
+        expected:
+          - client_id
+          - client_id_issued_at

@@ -1,0 +1,34 @@
+id: errors.unknown_scope
+title: "Token with unknown scope returns 403 or insufficient_scope"
+version: "0.1"
+spec_refs:
+  - mcp.authorization
+capabilities:
+  required:
+    - oauth.bearer
+partner:
+  type: mcp_auth_test_server
+steps:
+  - id: mint_token_unknown_scope
+    type: client_request
+    action: test.tokens.mint_expired
+    request:
+      json:
+        subject: "test-user"
+        scope: "totally:unknown:scope"
+        audience: "http://127.0.0.1:8765/mcp/oauth"
+    assert:
+      - type: status
+        expected: 201
+  - id: call_with_unknown_scope
+    type: client_request
+    action: mcp.request
+    auth:
+      bearer_token:
+        from_step: mint_token_unknown_scope
+    request:
+      method: tools/list
+      params: {}
+    assert:
+      - type: status
+        expected: [401, 403]

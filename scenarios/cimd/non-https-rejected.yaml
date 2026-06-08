@@ -1,26 +1,25 @@
-id: cimd.happy_path
-title: "CIMD URL as client_id happy path"
+id: cimd.non_https_rejected
+title: "HTTP CIMD URL rejected in production mode"
 version: "0.1"
 spec_refs:
   - draft.cimd
-  - mcp.authorization
 capabilities:
   required:
     - oauth.cimd
 partner:
   type: mcp_auth_test_server
 steps:
-  - id: cimd_auth_request
+  - id: cimd_http_url
     type: client_request
     action: oauth.auth_code.authorize
     request:
       params:
         response_type: "code"
-        client_id: "http://127.0.0.1:8765/test/cimd/valid.json"
+        client_id: "http://insecure.example.com/client.json"
         redirect_uri: "http://127.0.0.1:9876/callback"
         code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
         code_challenge_method: "S256"
-        state: "cimd123"
+        state: "cimd456"
     assert:
       - type: status
-        expected: [200, 302]
+        expected: [400]
