@@ -5,13 +5,16 @@ from __future__ import annotations
 import argparse
 import asyncio
 import inspect
+import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from mcp_conformance.partners.mcp_auth_test_server import AuthTestServerPartner
 from mcp_conformance.reports.json_report import format_json
 from mcp_conformance.reports.markdown_report import format_markdown
 from mcp_conformance.runner import ExitCode, ScenarioRunner
+from mcp_conformance.scenario.models import ScenarioDef
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -45,6 +48,23 @@ def build_parser() -> argparse.ArgumentParser:
         default="markdown",
         help="Report output format",
     )
+    run.add_argument(
+        "--include",
+        action="append",
+        default=[],
+        metavar="capability:X",
+        help="Only run scenarios that declare the given capability. May be repeated.",
+    )
+    run.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        metavar="capability:X",
+        help="Skip scenarios that declare the given capability. May be repeated.",
+    )
+
+    compare = sub.add_parser("compare", help="Compare two conformance report files")
+    compare.add_argument("files", nargs=2, type=Path, help="Two JSON report files to compare")
 
     return parser
 
@@ -55,6 +75,11 @@ async def _run(args: argparse.Namespace) -> int:
     try:
         scenario_paths = _expand_scenario_paths(args.paths)
         scenarios = load_scenarios(scenario_paths)
+        scenarios = _filter_scenarios(
+            scenarios,
+            [_normalize_capability(cap) for cap in args.include],
+            [_normalize_capability(cap) for cap in args.exclude],
+        )
     except Exception as exc:
         print(f"Failed to load scenarios: {exc}", file=sys.stderr)
         return int(ExitCode.CONFIG_ERROR)
@@ -95,10 +120,101 @@ def main() -> None:
 
     if args.command == "run":
         exit_code = asyncio.run(_run(args))
-        sys.exit(exit_code)
+    elif args.command == "compare":
+        exit_code = _compare(args)
     else:
         parser.print_help()
-        sys.exit(int(ExitCode.CONFIG_ERROR))
+        exit_code = int(ExitCode.CONFIG_ERROR)
+
+    sys.exit(exit_code)
+
+
+def _compare(args: argparse.Namespace) -> int:
+    try:
+        left_report = _load_report(args.files[0])
+        right_report = _load_report(args.files[1])
+    except Exception as exc:
+        print(f"Failed to load report files: {exc}", file=sys.stderr)
+        return int(ExitCode.CONFIG_ERROR)
+
+    print(_format_report_comparison(args.files[0], left_report, args.files[1], right_report))
+    return int(ExitCode.ALL_PASSED)
+
+
+def _load_report(path: Path) -> dict[str, Any]:
+    with path.open() as fh:
+        return json.load(fh)
+
+
+def _format_report_comparison(
+    left_path: Path,
+    left_report: dict[str, Any],
+    right_path: Path,
+    right_report: dict[str, Any],
+) -> str:
+    left_statuses = _scenario_statuses(left_report)
+    right_statuses = _scenario_statuses(right_report)
+    scenario_ids = sorted(set(left_statuses) | set(right_statuses))
+
+    left_label = left_path.name
+    right_label = right_path.name
+    rows = [
+        ["Scenario", left_label, right_label, "Changed"],
+        ["-" * 8, "-" * len(left_label), "-" * len(right_label), "-" * 7],
+    ]
+    for scenario_id in scenario_ids:
+        left_status = left_statuses.get(scenario_id, "missing")
+        right_status = right_statuses.get(scenario_id, "missing")
+        rows.append(
+            [
+                scenario_id,
+                left_status,
+                right_status,
+                "yes" if left_status != right_status else "no",
+            ]
+        )
+
+    widths = [max(len(row[index]) for row in rows) for index in range(len(rows[0]))]
+    return "\n".join(
+        "  ".join(value.ljust(widths[index]) for index, value in enumerate(row)) for row in rows
+    )
+
+
+def _scenario_statuses(report: dict[str, Any]) -> dict[str, str]:
+    statuses: dict[str, str] = {}
+    for scenario in report.get("scenarios", []):
+        scenario_id = scenario.get("id")
+        if not scenario_id:
+            continue
+        statuses[str(scenario_id)] = "passed" if scenario.get("passed") else "failed"
+    return statuses
+
+
+def _normalize_capability(value: str) -> str:
+    if value.startswith("capability:"):
+        return value.removeprefix("capability:")
+    return value
+
+
+def _filter_scenarios(
+    scenarios: list[ScenarioDef],
+    include: list[str],
+    exclude: list[str],
+) -> list[ScenarioDef]:
+    result = scenarios
+    if include:
+        result = [
+            scenario
+            for scenario in result
+            if any(cap in include for caps in scenario.capabilities.values() for cap in caps)
+        ]
+    if exclude:
+        result = [
+            scenario
+            for scenario in result
+            if not any(cap in exclude for caps in scenario.capabilities.values() for cap in caps)
+        ]
+    return result
 
 
 def _build_partner(args: argparse.Namespace) -> object:

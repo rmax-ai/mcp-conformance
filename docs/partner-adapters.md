@@ -1,8 +1,12 @@
 # Partner Adapter Guide
 
-Guide for writing custom partner adapters. Coming in Phase 4.
+Partner adapters translate generic scenario operations into the concrete API of the system under test.
 
-## Available Adapters
+## Built-in Adapters
 
-- `mcp_auth_test_server` — connects to mcp-auth-test-server (reference implementation)
-- `generic_mcp_server` — connects to any MCP server with basic JSON-RPC over HTTP
+- `mcp-auth-test-server` — connects to mcp-auth-test-server (OAuth, DCR, CIMD, debug endpoints)
+- `generic-mcp-server` — connects to any MCP server with basic JSON-RPC over HTTP
+
+## Writing Custom Adapters
+
+Implement the `TestPartner` ABC from `mcp_conformance.partners.base`.

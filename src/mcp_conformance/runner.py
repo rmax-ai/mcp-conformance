@@ -66,15 +66,19 @@ class ScenarioRunner:
 
     def __init__(self, partner: TestPartner) -> None:
         self._partner = partner
+        self._step_results: dict[str, Any] = {}
 
     async def run(self, scenario: ScenarioDef) -> ScenarioResult:
         """Execute a scenario against the configured partner."""
+        self._step_results = {}
         step_results: list[StepResult] = []
         all_passed = True
 
         for i, step in enumerate(scenario.steps):
             result = await self._execute_step(i, step)
             step_results.append(result)
+            if step.id and result.response is not None:
+                self._step_results[step.id] = result.response.get("body")
             if not result.passed:
                 all_passed = False
                 break
@@ -155,18 +159,18 @@ class ScenarioRunner:
 
         if step.action.startswith("oauth.") or step.action == "test.tokens.mint_expired":
             method = _default_http_method(step)
-            params = request.get("params", {})
+            params, body = _resolve_auth_request_payload(step)
             path = _build_url(_action_to_url(step.action), params)
             trace.request_method = method
             trace.request_url = self._full_url(path)
             trace.request_headers = dict(request.get("headers", {}))
-            trace.request_body = request.get("json", request.get("body"))
+            trace.request_body = body
             response = await self._partner.send_auth_request(
                 AuthStep(
                     method=method,
                     url=path,
                     headers=trace.request_headers,
-                    body=trace.request_body,
+                    body=body,
                 )
             )
             _populate_trace_from_response(trace, response)
@@ -188,11 +192,7 @@ class ScenarioRunner:
             return trace
 
         if step.action == "test.faults.configure":
-            payload = {
-                "endpoint": request.get("endpoint", step.params.get("endpoint", "")),
-                "behavior": request.get("behavior", step.params.get("behavior", "")),
-                "params": request.get("params", step.params.get("params", {})),
-            }
+            payload = _resolve_fault_payload(step)
             trace.request_method = request.get("method", "POST").upper()
             trace.request_url = self._full_url(_action_to_url(step.action))
             trace.request_body = payload
@@ -203,13 +203,14 @@ class ScenarioRunner:
 
         if step.action.startswith("mcp."):
             endpoint = _action_to_url(step.action) if step.action == "mcp.bearer_request" else None
+            auth = self._resolve_step_auth(step.auth)
             trace.request_method = "POST"
             trace.request_url = (
                 self._full_url(endpoint) if endpoint else self._default_mcp_url(step.action)
             )
             trace.request_headers = dict(request.get("headers", {}))
-            if step.auth and "bearer_token" in step.auth:
-                trace.request_headers["Authorization"] = f"Bearer {step.auth['bearer_token']}"
+            if auth and "bearer_token" in auth:
+                trace.request_headers["Authorization"] = f"Bearer {auth['bearer_token']}"
             trace.request_body = {
                 "jsonrpc": "2.0",
                 "method": request.get("method", ""),
@@ -219,7 +220,7 @@ class ScenarioRunner:
             response = await self._partner.send_mcp_request(
                 method=request.get("method", ""),
                 params=request.get("params", {}),
-                auth=step.auth,
+                auth=auth,
                 headers=request.get("headers"),
                 endpoint=endpoint,
             )
@@ -227,6 +228,35 @@ class ScenarioRunner:
             return trace
 
         raise ValueError(f"Unsupported action '{step.action}'")
+
+    def _resolve_step_auth(self, auth: dict[str, Any] | None) -> dict[str, Any] | None:
+        if not auth:
+            return auth
+
+        bearer_token = auth.get("bearer_token")
+        if bearer_token is None:
+            return auth
+        if isinstance(bearer_token, str):
+            return auth
+        if not isinstance(bearer_token, dict):
+            raise ValueError("Unsupported bearer_token auth configuration")
+
+        step_id = bearer_token.get("from_step")
+        if not step_id:
+            raise ValueError("bearer_token auth reference is missing 'from_step'")
+
+        source = self._step_results.get(step_id)
+        if source is None:
+            raise ValueError(f"No stored step result found for '{step_id}'")
+
+        path = bearer_token.get("path", "$.access_token")
+        token = _extract_path_value(source, path)
+        if not token:
+            raise ValueError(f"No bearer token found at path '{path}' in step '{step_id}'")
+
+        resolved_auth = dict(auth)
+        resolved_auth["bearer_token"] = str(token)
+        return resolved_auth
 
     def _default_mcp_url(self, action: str) -> str:
         path = _action_to_url(action)
@@ -299,11 +329,60 @@ def _default_http_method(step: StepDef) -> str:
     request = step.request or {}
     if "method" in request:
         return str(request["method"]).upper()
-    if step.action in {"oauth.discover", "partner.health", "test.state"}:
+    if step.action in {
+        "oauth.discover",
+        "oauth.auth_code.authorize",
+        "partner.health",
+        "test.state",
+    }:
         return "GET"
     if "params" in request and "json" not in request and "body" not in request:
         return "GET"
     return "POST"
+
+
+def _resolve_auth_request_payload(step: StepDef) -> tuple[dict[str, Any], Any]:
+    request = step.request or {}
+    if step.action == "oauth.auth_code.authorize":
+        params = request.get("params")
+        if params is None:
+            params = request.get("json", request.get("body", {}))
+        return dict(params or {}), None
+    return dict(request.get("params", {})), request.get("json", request.get("body"))
+
+
+def _resolve_fault_payload(step: StepDef) -> dict[str, Any]:
+    request = step.request or {}
+    request_body = request.get("json", request.get("body"))
+    if isinstance(request_body, dict):
+        payload = dict(request_body)
+    else:
+        payload = {
+            "endpoint": request.get("endpoint", step.params.get("endpoint", "")),
+            "behavior": request.get("behavior", step.params.get("behavior", "")),
+            "params": request.get("params", step.params.get("params", {})),
+        }
+
+    payload.setdefault("endpoint", step.params.get("endpoint", ""))
+    payload.setdefault("behavior", step.params.get("behavior", ""))
+    payload.setdefault("params", step.params.get("params", {}))
+    return payload
+
+
+def _extract_path_value(data: Any, path: str) -> Any:
+    if path == "$":
+        return data
+    if not path.startswith("$."):
+        raise ValueError(f"Unsupported path '{path}'")
+
+    current = data
+    for key in path[2:].split("."):
+        if not isinstance(current, dict):
+            return None
+        current = current.get(key)
+        if current is None:
+            return None
+    return current
 
 
 def _populate_trace_from_response(trace: WireTrace, response: Any) -> None:
