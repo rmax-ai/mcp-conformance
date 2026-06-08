@@ -1,0 +1,19 @@
+id: auth.auth_code_pkce_happy_path
+title: "Auth code + PKCE happy path"
+version: "0.1"
+spec_refs:
+  - rfc6749
+  - rfc7636
+  - mcp.authorization
+capabilities:
+  required:
+    - oauth.auth_code_pkce
+partner:
+  type: mcp_auth_test_server
+steps:
+  - id: discover
+    type: client_request
+    action: oauth.discover
+    assert:
+      - type: status
+        expected: 200

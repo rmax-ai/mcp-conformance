@@ -44,7 +44,14 @@ class TestPartner(ABC):
         ...
 
     @abstractmethod
-    async def send_mcp_request(self, method: str, params: dict[str, Any]) -> MCPResponse:
+    async def send_mcp_request(
+        self,
+        method: str,
+        params: dict[str, Any] | None = None,
+        *,
+        auth: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> MCPResponse:
         """Send an MCP JSON-RPC request to the partner."""
         ...
 

@@ -20,6 +20,9 @@ dependencies = [
     "jsonpath-ng>=1.6.0",
 ]
 
+[project.scripts]
+mcp-conformance = "mcp_conformance.cli:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
@@ -43,3 +46,4 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

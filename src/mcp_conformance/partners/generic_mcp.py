@@ -1,4 +1,4 @@
-"""Partner adapter for the mcp-auth-test-server."""
+"""Generic MCP server adapter — works against any MCP JSON-RPC endpoint."""
 
 from __future__ import annotations
 
@@ -6,34 +6,49 @@ from typing import Any
 
 import httpx
 
-from .base import AuthStep, FaultConfig, MCPResponse, TestPartner
+from mcp_conformance.partners.base import AuthStep, FaultConfig, MCPResponse, TestPartner
 
 
-class AuthTestServerPartner(TestPartner):
-    """Adapter for the mcp-auth-test-server (FastAPI-based OAuth test server)."""
+class GenericMCPServerPartner(TestPartner):
+    """Adapter for any generic MCP server exposing JSON-RPC over HTTP."""
 
-    def __init__(self, base_url: str = "http://127.0.0.1:8765", timeout: float = 10.0) -> None:
+    def __init__(
+        self,
+        base_url: str = "http://127.0.0.1:8080",
+        timeout: float = 10.0,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self._timeout = timeout
         self._client = httpx.AsyncClient(timeout=timeout)
 
     async def health(self) -> bool:
         try:
-            r = await self._client.get(f"{self.base_url}/health")
+            r = await self._client.get(f"{self.base_url}/health", timeout=5)
             return r.status_code == 200
         except httpx.RequestError:
             return False
 
-    async def send_mcp_request(self, method: str, params: dict[str, Any]) -> MCPResponse:
+    async def send_mcp_request(
+        self,
+        method: str,
+        params: dict[str, Any] | None = None,
+        *,
+        auth: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> MCPResponse:
         body = {
             "jsonrpc": "2.0",
             "method": method,
-            "params": params,
+            "params": params or {},
             "id": 1,
         }
+        req_headers = dict(headers or {})
+        if auth and "bearer_token" in auth:
+            req_headers["Authorization"] = f"Bearer {auth['bearer_token']}"
         r = await self._client.post(
-            f"{self.base_url}/mcp/oauth",
+            self.base_url,
             json=body,
+            headers=req_headers,
         )
         return MCPResponse(
             status=r.status_code,
@@ -55,21 +70,13 @@ class AuthTestServerPartner(TestPartner):
         )
 
     async def reset_state(self) -> None:
-        await self._client.post(f"{self.base_url}/debug/reset")
+        pass  # Generic server may not support state reset
 
     async def get_debug_state(self, endpoint: str) -> dict[str, Any]:
-        r = await self._client.get(f"{self.base_url}{endpoint}")
-        return r.json() if r.text else {}
+        return {}
 
     async def configure_injection(self, fault: FaultConfig) -> None:
-        await self._client.post(
-            f"{self.base_url}/test/faults",
-            json={
-                "endpoint": fault.endpoint,
-                "behavior": fault.behavior,
-                "params": fault.params,
-            },
-        )
+        pass  # Generic server likely doesn't support fault injection
 
     async def close(self) -> None:
         await self._client.aclose()

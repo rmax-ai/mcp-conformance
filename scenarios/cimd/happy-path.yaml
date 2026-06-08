@@ -1,0 +1,25 @@
+id: cimd.happy_path
+title: "CIMD URL as client_id happy path"
+version: "0.1"
+spec_refs:
+  - mcp.authorization
+  - draft.cimd
+capabilities:
+  required:
+    - oauth.cimd
+partner:
+  type: mcp_auth_test_server
+steps:
+  - id: cimd_auth
+    type: client_request
+    action: oauth.auth_code.authorize
+    request:
+      params:
+        client_id: "http://localhost:8765/test/cimd/valid.json"
+        redirect_uri: "http://127.0.0.1:9999/callback"
+        response_type: "code"
+        code_challenge: "test-challenge"
+        code_challenge_method: "S256"
+    assert:
+      - type: status
+        expected: [200, 302]

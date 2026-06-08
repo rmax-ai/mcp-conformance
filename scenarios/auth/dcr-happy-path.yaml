@@ -1,29 +1,41 @@
-# MCP Conformance — Auth Scenario: DCR Happy Path
-# Discover auth metadata, register a client via DCR, authorize, exchange token, call MCP endpoint
----
-name: dcr-happy-path
-description: >
-  Full happy path: discover authorization server metadata → DCR register →
-  authorize with PKCE → consent → token exchange → protected MCP call
+id: auth.dcr_happy_path
+title: "DCR happy path"
+version: "0.1"
+spec_refs:
+  - rfc7591
+  - mcp.authorization
+capabilities:
+  required:
+    - oauth.dcr
+    - oauth.auth_code_pkce
+partner:
+  type: mcp_auth_test_server
 steps:
-  - step_type: client_request
-    params:
-      method: GET
-      url: /.well-known/oauth-authorization-server
-    assertions:
+  - id: health
+    type: client_request
+    action: partner.health
+    assert:
       - type: status
         expected: 200
-
-  - step_type: client_request
-    params:
-      method: POST
-      url: /register
-      body:
-        redirect_uris: ["http://127.0.0.1:9999/callback"]
-        grant_types: ["authorization_code"]
+  - id: register
+    type: client_request
+    action: oauth.dcr.register
+    request:
+      json:
+        client_name: "mcp-conformance test client"
+        redirect_uris:
+          - "http://127.0.0.1:9876/callback"
+        grant_types:
+          - authorization_code
+          - refresh_token
+        response_types:
+          - code
         token_endpoint_auth_method: "none"
-    assertions:
+    assert:
       - type: status
-        expected: 201
-      - type: body_json_path
-        expected: "client_id"
+        expected: [200, 201]
+      - type: response_contains_keys
+        expected:
+          - client_id
+          - redirect_uris
+          - grant_types

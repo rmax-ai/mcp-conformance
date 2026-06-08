@@ -1,0 +1,23 @@
+id: dcr.missing_redirect_uris
+title: "DCR registration with missing redirect URIs"
+version: "0.1"
+spec_refs:
+  - rfc7591
+capabilities:
+  required:
+    - oauth.dcr
+partner:
+  type: mcp_auth_test_server
+steps:
+  - id: register_no_redirect
+    type: client_request
+    action: oauth.dcr.register
+    request:
+      json:
+        client_name: "bad client"
+        grant_types:
+          - authorization_code
+        token_endpoint_auth_method: "none"
+    assert:
+      - type: status
+        expected: [400]
