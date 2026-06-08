@@ -241,10 +241,36 @@ class ScenarioRunner:
         if not isinstance(bearer_token, dict):
             raise ValueError("Unsupported bearer_token auth configuration")
 
-        step_id = bearer_token.get("from_step")
-        if not step_id:
-            raise ValueError("bearer_token auth reference is missing 'from_step'")
+        resolved = self._resolve_bearer_token_dict(bearer_token)
+        resolved_auth = dict(auth)
+        resolved_auth["bearer_token"] = resolved
+        return resolved_auth
 
+    def _resolve_bearer_token_dict(self, bearer_token: dict[str, Any]) -> str:
+        """Resolve a bearer token dict to a concrete token value.
+
+        Supports:
+        - ``from_step`` — token from a prior step's JSON response body
+        - ``from_env`` — token from an environment variable
+        """
+        step_id = bearer_token.get("from_step")
+        env_var = bearer_token.get("from_env")
+
+        if step_id and env_var:
+            raise ValueError(
+                "bearer_token must use either 'from_step' or 'from_env', not both"
+            )
+        if step_id:
+            return self._resolve_token_from_step(step_id, bearer_token)
+        if env_var:
+            return self._resolve_token_from_env(env_var, bearer_token)
+        raise ValueError(
+            "bearer_token dict must contain 'from_step' or 'from_env'"
+        )
+
+    def _resolve_token_from_step(
+        self, step_id: str, bearer_token: dict[str, Any]
+    ) -> str:
         source = self._step_results.get(step_id)
         if source is None:
             raise ValueError(f"No stored step result found for '{step_id}'")
@@ -254,9 +280,19 @@ class ScenarioRunner:
         if not token:
             raise ValueError(f"No bearer token found at path '{path}' in step '{step_id}'")
 
-        resolved_auth = dict(auth)
-        resolved_auth["bearer_token"] = str(token)
-        return resolved_auth
+        return str(token)
+
+    def _resolve_token_from_env(
+        self, env_var: str, bearer_token: dict[str, Any]
+    ) -> str:
+        import os
+
+        token = os.environ.get(env_var)
+        if not token:
+            raise ValueError(
+                f"Environment variable '{env_var}' is not set or is empty"
+            )
+        return token
 
     def _default_mcp_url(self, action: str) -> str:
         path = _action_to_url(action)

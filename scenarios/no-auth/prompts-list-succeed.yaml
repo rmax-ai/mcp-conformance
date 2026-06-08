@@ -1,0 +1,25 @@
+id: no_auth.prompts_list
+title: "prompts/list succeeds on a no-auth MCP server"
+version: "0.1"
+spec_refs:
+  - mcp.prompts
+  - jsonrpc.2_0
+capabilities:
+  required:
+    - mcp.no_auth
+    - mcp.prompts
+partner:
+  type: generic_mcp_server
+steps:
+  - id: list_prompts
+    type: client_request
+    action: mcp.request
+    request:
+      method: prompts/list
+      params: {}
+    assert:
+      - type: jsonrpc_version
+      - type: result_exists
+      - type: result_shape
+        expected:
+          - prompts

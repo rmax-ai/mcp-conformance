@@ -1,0 +1,25 @@
+id: no_auth.resources_list
+title: "resources/list succeeds on a no-auth MCP server"
+version: "0.1"
+spec_refs:
+  - mcp.resources
+  - jsonrpc.2_0
+capabilities:
+  required:
+    - mcp.no_auth
+    - mcp.resources
+partner:
+  type: generic_mcp_server
+steps:
+  - id: list_resources
+    type: client_request
+    action: mcp.request
+    request:
+      method: resources/list
+      params: {}
+    assert:
+      - type: jsonrpc_version
+      - type: result_exists
+      - type: result_shape
+        expected:
+          - resources

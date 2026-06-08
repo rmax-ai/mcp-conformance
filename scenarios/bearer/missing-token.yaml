@@ -1,0 +1,24 @@
+id: bearer.missing_token
+title: "Missing bearer token returns 401 with challenge"
+version: "0.1"
+spec_refs:
+  - rfc6750
+  - mcp.authorization
+capabilities:
+  required:
+    - mcp.bearer_auth
+partner:
+  type: generic_mcp_server
+steps:
+  - id: call_without_token
+    type: client_request
+    action: mcp.request
+    request:
+      method: tools/list
+      params: {}
+    assert:
+      - type: status
+        expected: 401
+      - type: header
+        name: "WWW-Authenticate"
+        matches: "Bearer"

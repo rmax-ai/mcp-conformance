@@ -1,0 +1,33 @@
+id: no_auth.initialize
+title: "initialize succeeds on a no-auth MCP server"
+version: "0.1"
+spec_refs:
+  - mcp.session
+  - jsonrpc.2_0
+capabilities:
+  required:
+    - mcp.no_auth
+    - mcp.session
+partner:
+  type: generic_mcp_server
+steps:
+  - id: initialize
+    type: client_request
+    action: mcp.request
+    request:
+      method: initialize
+      params:
+        protocolVersion: "2024-11-05"
+        capabilities:
+          tools: {}
+        clientInfo:
+          name: "mcp-conformance"
+          version: "0.1.0"
+    assert:
+      - type: jsonrpc_version
+      - type: result_exists
+      - type: result_shape
+        expected:
+          - protocolVersion
+          - capabilities
+          - serverInfo

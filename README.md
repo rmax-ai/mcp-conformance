@@ -49,6 +49,8 @@ mcp-conformance/
 │   └── report.py              # Result formatters
 ├── scenarios/                 # YAML scenario definitions
 │   ├── auth/                  # OAuth, DCR, CIMD scenarios
+│   ├── no-auth/               # No-auth MCP scenarios
+│   ├── bearer/                # Bearer token auth MCP scenarios
 │   ├── protocol/              # tools/list, tools/call, resources scenarios
 │   └── errors/                # Error and edge-case scenarios
 ├── tests/                     # Test suite

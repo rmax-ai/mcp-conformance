@@ -63,8 +63,7 @@ errors, or whether an OAuth server validates PKCE correctly.
 
 mcp-conformance solves this with:
 
-- **25 MVP scenarios** covering OAuth Auth Code + PKCE, DCR, CIMD, MCP protocol,
-  and error/edge cases
+- **35 conformance scenarios** covering OAuth Auth Code + PKCE, DCR, CIMD, MCP protocol, No-Auth MCP, Bearer Token Auth, and error/edge cases
 - **Assertion library** across HTTP, JSON-RPC, OAuth, PKCE, DCR, CIMD, and wire
   layers
 - **Canonical JSON reports** with scenario IDs, spec references, artifact

@@ -1,0 +1,24 @@
+id: bearer.insufficient_scope
+title: "Bearer token with insufficient scope returns 403"
+version: "0.1"
+spec_refs:
+  - rfc6750
+  - mcp.authorization
+capabilities:
+  required:
+    - mcp.bearer_auth
+partner:
+  type: generic_mcp_server
+steps:
+  - id: call_with_limited_token
+    type: client_request
+    action: mcp.request
+    auth:
+      bearer_token:
+        from_env: MCP_LIMITED_TOKEN
+    request:
+      method: tools/list
+      params: {}
+    assert:
+      - type: status
+        expected: 403

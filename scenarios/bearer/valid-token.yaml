@@ -1,0 +1,28 @@
+id: bearer.valid_token
+title: "Bearer token auth happy path — valid token accepted"
+version: "0.1"
+spec_refs:
+  - rfc6750
+  - mcp.authorization
+capabilities:
+  required:
+    - mcp.bearer_auth
+    - mcp.tools
+partner:
+  type: generic_mcp_server
+steps:
+  - id: call_with_valid_token
+    type: client_request
+    action: mcp.request
+    auth:
+      bearer_token:
+        from_env: MCP_BEARER_TOKEN
+    request:
+      method: tools/list
+      params: {}
+    assert:
+      - type: jsonrpc_version
+      - type: result_exists
+      - type: result_shape
+        expected:
+          - tools

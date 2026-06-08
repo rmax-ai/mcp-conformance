@@ -1,0 +1,26 @@
+id: bearer.invalid_token
+title: "Invalid/malformed bearer token returns 401"
+version: "0.1"
+spec_refs:
+  - rfc6750
+  - mcp.authorization
+capabilities:
+  required:
+    - mcp.bearer_auth
+partner:
+  type: generic_mcp_server
+steps:
+  - id: call_with_invalid_token
+    type: client_request
+    action: mcp.request
+    auth:
+      bearer_token: "definitely-not-a-valid-token"
+    request:
+      method: tools/list
+      params: {}
+    assert:
+      - type: status
+        expected: 401
+      - type: header
+        name: "WWW-Authenticate"
+        matches: "Bearer"

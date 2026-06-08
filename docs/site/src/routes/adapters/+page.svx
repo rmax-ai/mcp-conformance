@@ -30,6 +30,39 @@ A minimal adapter for any MCP server exposing JSON-RPC over HTTP.
 mcp-conformance run --partner generic-mcp --base-url http://127.0.0.1:8080
 ```
 
+Supports Bearer token auth. Provide the token inline:
+
+```yaml
+steps:
+  - id: call
+    type: client_request
+    action: mcp.request
+    auth:
+      bearer_token: "my-static-token"
+    request:
+      method: tools/list
+```
+
+Or resolve from an environment variable:
+
+```yaml
+steps:
+  - id: call
+    type: client_request
+    action: mcp.request
+    auth:
+      bearer_token:
+        from_env: MCP_BEARER_TOKEN
+    request:
+      method: tools/list
+```
+
+This lets you keep tokens out of scenario YAML and pass them at runtime:
+
+```bash
+MCP_BEARER_TOKEN=$(cat /secrets/mcp-token) mcp-conformance run --partner generic-mcp
+```
+
 ## Writing Custom Adapters
 
 Implement the `TestPartner` ABC:

@@ -193,3 +193,114 @@ async def test_test_reset_and_state_use_partner_hooks() -> None:
     assert partner.debug_calls == ["/test/state"]
     assert reset_trace.response_body == {"reset": True}
     assert state_trace.response_body == {"endpoint": "/test/state"}
+
+
+def test_resolve_bearer_token_from_env_resolves() -> None:
+    """from_env resolves the bearer token from an environment variable."""
+    import os
+
+    from mcp_conformance.partners.base import MCPResponse, TestPartner
+    from mcp_conformance.runner import ScenarioRunner
+    from mcp_conformance.scenario.models import ScenarioDef, StepDef, StepType
+
+    os.environ["MCP_CONFORMANCE_TEST_TOKEN"] = "test-token-value"
+
+    class EnvStubPartner(TestPartner):
+        def __init__(self) -> None:
+            self.base_url = "http://example.test"
+            self.last_auth: dict | None = None
+
+        async def health(self) -> bool:
+            return True
+
+        async def send_mcp_request(
+            self,
+            method: str,
+            params: dict | None = None,
+            *,
+            auth: dict | None = None,
+            headers: dict[str, str] | None = None,
+            endpoint: str | None = None,
+        ) -> MCPResponse:
+            self.last_auth = auth
+            return MCPResponse(status=200, headers={}, body={"result": "ok"})
+
+        async def send_auth_request(self, step: AuthStep) -> MCPResponse:
+            return MCPResponse(status=200, headers={}, body={})
+
+        async def reset_state(self) -> None:
+            pass
+
+        async def get_debug_state(self, endpoint: str) -> dict:
+            return {}
+
+        async def configure_injection(self, fault: FaultConfig) -> None:
+            pass
+
+    partner = EnvStubPartner()
+    runner = ScenarioRunner(partner)
+    scenario = ScenarioDef(
+        id="from-env-test",
+        title="From env test",
+        steps=[
+            StepDef(
+                id="call",
+                type=StepType.CLIENT_REQUEST,
+                action="mcp.request",
+                auth={"bearer_token": {"from_env": "MCP_CONFORMANCE_TEST_TOKEN"}},
+                request={"method": "tools/list", "params": {}},
+                assert_=[],
+            ),
+        ],
+    )
+
+    import asyncio
+
+    asyncio.run(runner.run(scenario))
+
+    assert partner.last_auth is not None
+    assert partner.last_auth["bearer_token"] == "test-token-value"
+
+
+def test_resolve_bearer_token_from_env_raises_on_missing() -> None:
+    """from_env raises when the environment variable is not set."""
+    import os
+
+    from mcp_conformance.runner import ScenarioRunner
+    from mcp_conformance.scenario.models import StepDef, StepType
+    from mcp_conformance.partners.base import TestPartner, AuthStep, FaultConfig, MCPResponse
+
+    key = "MCP_CONFORMANCE_MISSING_VAR_29134"
+    if key in os.environ:
+        del os.environ[key]
+
+    class Stub(TestPartner):
+        base_url = "http://x"
+
+        async def health(self) -> bool:
+            return True
+        async def send_mcp_request(self, *a, **kw) -> MCPResponse:
+            return MCPResponse(status=200, headers={}, body={})
+        async def send_auth_request(self, step: AuthStep) -> MCPResponse:
+            return MCPResponse(status=200, headers={}, body={})
+        async def reset_state(self) -> None:
+            pass
+        async def get_debug_state(self, endpoint: str) -> dict:
+            return {}
+        async def configure_injection(self, fault: FaultConfig) -> None:
+            pass
+
+    runner = ScenarioRunner(Stub())
+    step = StepDef(
+        id="call",
+        type=StepType.CLIENT_REQUEST,
+        action="mcp.request",
+        auth={"bearer_token": {"from_env": key}},
+        request={"method": "tools/list", "params": {}},
+        assert_=[],
+    )
+
+    import pytest
+
+    with pytest.raises(ValueError, match=key):
+        runner._resolve_step_auth(step.auth)

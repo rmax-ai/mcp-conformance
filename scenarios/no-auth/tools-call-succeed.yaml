@@ -1,0 +1,25 @@
+id: no_auth.tools_call
+title: "tools/call succeeds on a no-auth MCP server"
+version: "0.1"
+spec_refs:
+  - mcp.tools
+  - jsonrpc.2_0
+capabilities:
+  required:
+    - mcp.no_auth
+    - mcp.tools
+partner:
+  type: generic_mcp_server
+steps:
+  - id: call_tool
+    type: client_request
+    action: mcp.request
+    request:
+      method: tools/call
+      params:
+        name: "echo"
+        arguments:
+          message: "hello"
+    assert:
+      - type: jsonrpc_version
+      - type: result_exists

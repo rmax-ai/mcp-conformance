@@ -1,0 +1,27 @@
+id: bearer.expired_token
+title: "Expired bearer token returns 401"
+version: "0.1"
+spec_refs:
+  - rfc6750
+  - mcp.authorization
+capabilities:
+  required:
+    - mcp.bearer_auth
+partner:
+  type: generic_mcp_server
+steps:
+  - id: call_with_expired_token
+    type: client_request
+    action: mcp.request
+    auth:
+      bearer_token:
+        from_env: MCP_EXPIRED_TOKEN
+    request:
+      method: tools/list
+      params: {}
+    assert:
+      - type: status
+        expected: 401
+      - type: header
+        name: "WWW-Authenticate"
+        matches: "Bearer"

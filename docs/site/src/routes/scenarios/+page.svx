@@ -7,7 +7,7 @@ description: Complete catalog of 25 MVP conformance scenarios.
 
 # Scenario Catalog
 
-The MVP ships **25 scenarios** across five capability areas.
+The test suite ships **35 scenarios** across seven capability areas.
 
 ## OAuth Auth Code + PKCE (6)
 
@@ -58,3 +58,28 @@ The MVP ships **25 scenarios** across five capability areas.
 | `errors.unknown_scope` | Unknown scope → 403 | Draft |
 | `errors.insufficient_scope` | Insufficient permissions → 403 | Draft |
 | `errors.wrong_audience` | Wrong audience → 401 | Draft |
+
+## No-Auth MCP (5)
+
+Test that a server exposes MCP operations without requiring any authentication.
+
+| ID | Scenario | Status |
+|---|---|---|
+| `no_auth.tools_list` | tools/list succeeds without auth | Draft |
+| `no_auth.tools_call` | tools/call succeeds without auth | Draft |
+| `no_auth.initialize` | initialize handshake works with no auth | Draft |
+| `no_auth.resources_list` | resources/list succeeds without auth | Draft |
+| `no_auth.prompts_list` | prompts/list succeeds without auth | Draft |
+
+## Bearer Token Auth MCP (5)
+
+Test that a server correctly validates RFC 6750 Bearer tokens on MCP requests.
+Tokens can be provided inline or resolved from an environment variable via `from_env`.
+
+| ID | Scenario | Status |
+|---|---|---|
+| `bearer.valid_token` | Valid Bearer token → 200 + valid response | Draft |
+| `bearer.missing_token` | No token → 401 + WWW-Authenticate | Draft |
+| `bearer.invalid_token` | Malformed token → 401 | Draft |
+| `bearer.expired_token` | Expired token → 401 | Draft |
+| `bearer.insufficient_scope` | Wrong scope → 403 | Draft |
