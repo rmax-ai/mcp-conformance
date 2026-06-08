@@ -35,6 +35,7 @@ class GenericMCPServerPartner(TestPartner):
         *,
         auth: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        endpoint: str | None = None,
     ) -> MCPResponse:
         body = {
             "jsonrpc": "2.0",
@@ -45,15 +46,18 @@ class GenericMCPServerPartner(TestPartner):
         req_headers = dict(headers or {})
         if auth and "bearer_token" in auth:
             req_headers["Authorization"] = f"Bearer {auth['bearer_token']}"
+        url = self.base_url
+        if endpoint:
+            url = f"{self.base_url}{endpoint}" if endpoint.startswith("/") else endpoint
         r = await self._client.post(
-            self.base_url,
+            url,
             json=body,
             headers=req_headers,
         )
         return MCPResponse(
             status=r.status_code,
             headers=dict(r.headers),
-            body=r.json() if r.text else {},
+            body=_decode_body(r),
         )
 
     async def send_auth_request(self, step: AuthStep) -> MCPResponse:
@@ -66,7 +70,7 @@ class GenericMCPServerPartner(TestPartner):
         return MCPResponse(
             status=r.status_code,
             headers=dict(r.headers),
-            body=r.json() if r.text else {},
+            body=_decode_body(r),
         )
 
     async def reset_state(self) -> None:
@@ -80,3 +84,12 @@ class GenericMCPServerPartner(TestPartner):
 
     async def close(self) -> None:
         await self._client.aclose()
+
+
+def _decode_body(response: httpx.Response) -> dict[str, Any]:
+    if not response.text:
+        return {}
+    try:
+        return response.json()
+    except ValueError:
+        return {"raw": response.text}

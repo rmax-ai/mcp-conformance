@@ -31,6 +31,7 @@ class AuthTestServerPartner(TestPartner):
         *,
         auth: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        endpoint: str | None = None,
     ) -> MCPResponse:
         body = {
             "jsonrpc": "2.0",
@@ -42,14 +43,14 @@ class AuthTestServerPartner(TestPartner):
         if auth and "bearer_token" in auth:
             req_headers["Authorization"] = f"Bearer {auth['bearer_token']}"
         r = await self._client.post(
-            f"{self.base_url}/mcp/oauth",
+            f"{self.base_url}{endpoint or '/mcp/oauth'}",
             json=body,
             headers=req_headers or None,
         )
         return MCPResponse(
             status=r.status_code,
             headers=dict(r.headers),
-            body=r.json() if r.text else {},
+            body=_decode_body(r),
         )
 
     async def send_auth_request(self, step: AuthStep) -> MCPResponse:
@@ -62,11 +63,11 @@ class AuthTestServerPartner(TestPartner):
         return MCPResponse(
             status=r.status_code,
             headers=dict(r.headers),
-            body=r.json() if r.text else {},
+            body=_decode_body(r),
         )
 
     async def reset_state(self) -> None:
-        await self._client.post(f"{self.base_url}/debug/reset")
+        await self._client.post(f"{self.base_url}/test/reset")
 
     async def get_debug_state(self, endpoint: str) -> dict[str, Any]:
         r = await self._client.get(f"{self.base_url}{endpoint}")
@@ -84,3 +85,12 @@ class AuthTestServerPartner(TestPartner):
 
     async def close(self) -> None:
         await self._client.aclose()
+
+
+def _decode_body(response: httpx.Response) -> dict[str, Any]:
+    if not response.text:
+        return {}
+    try:
+        return response.json()
+    except ValueError:
+        return {"raw": response.text}

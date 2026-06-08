@@ -7,6 +7,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from mcp_conformance.wire.capture import WireTrace
+
 
 class StepType(StrEnum):
     CLIENT_REQUEST = "client_request"
@@ -64,6 +66,7 @@ class StepResult(BaseModel):
     errors: list[str] = Field(default_factory=list)
     request: dict[str, Any] | None = None
     response: dict[str, Any] | None = None
+    wire_trace: WireTrace | None = None
     elapsed_ms: float = 0.0
     skipped: bool = False
 

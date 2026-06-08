@@ -51,6 +51,7 @@ class TestPartner(ABC):
         *,
         auth: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        endpoint: str | None = None,
     ) -> MCPResponse:
         """Send an MCP JSON-RPC request to the partner."""
         ...
