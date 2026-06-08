@@ -1,0 +1,19 @@
+# MCP Conformance — Auth Scenario: Missing PKCE Challenge
+# Client sends authorize request without code_challenge → expect 400
+---
+name: missing-pkce-challenge
+description: >
+  Authorization request without PKCE code_challenge should be rejected
+  for public clients using authorization code grant
+steps:
+  - step_type: client_request
+    params:
+      method: POST
+      url: /authorize
+      body:
+        response_type: "code"
+        client_id: "test-client"
+        redirect_uri: "http://127.0.0.1:9999/callback"
+    assertions:
+      - type: status
+        expected: [400, 302]

@@ -1,0 +1,20 @@
+# MCP Conformance — Error Scenario: Unauthorized Request
+# Request without Bearer token returns 401 with WWW-Authenticate header
+---
+name: unauthorized-request
+description: >
+  MCP request without Bearer token should return 401 with WWW-Authenticate
+  challenge header
+steps:
+  - step_type: client_request
+    params:
+      method: POST
+      url: /mcp/bearer-token
+      body:
+        jsonrpc: "2.0"
+        method: "tools/list"
+        params: {}
+        id: 1
+    assertions:
+      - type: status
+        expected: 401

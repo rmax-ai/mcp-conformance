@@ -1,0 +1,22 @@
+# MCP Conformance — Protocol Scenario: tools/list Response Shape
+# Verify that tools/list returns expected JSON-RPC 2.0 response shape
+---
+name: tools-list-schema
+description: >
+  Verify tools/list returns expected JSON-RPC 2.0 response shape with
+  jsonrpc version, result containing tools array
+steps:
+  - step_type: client_request
+    params:
+      method: POST
+      url: /mcp/oauth
+      body:
+        jsonrpc: "2.0"
+        method: "tools/list"
+        params: {}
+        id: 1
+    assertions:
+      - type: status
+        expected: 200
+      - type: body_json_path
+        expected: "jsonrpc"
