@@ -1,3 +1,7 @@
+<script context="module">
+  import { base } from "$app/paths";
+</script>
+
 ---
 title: Authoring Scenarios
 description: How to write declarative YAML conformance scenarios.
@@ -76,4 +80,4 @@ steps:
 
 ## Assertion Types
 
-See [Reports](/reports/) for the full assertion catalog.
+See <a href="{base}/reports/">Reports</a> for the full assertion catalog.
