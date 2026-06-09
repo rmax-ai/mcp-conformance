@@ -257,20 +257,14 @@ class ScenarioRunner:
         env_var = bearer_token.get("from_env")
 
         if step_id and env_var:
-            raise ValueError(
-                "bearer_token must use either 'from_step' or 'from_env', not both"
-            )
+            raise ValueError("bearer_token must use either 'from_step' or 'from_env', not both")
         if step_id:
             return self._resolve_token_from_step(step_id, bearer_token)
         if env_var:
             return self._resolve_token_from_env(env_var, bearer_token)
-        raise ValueError(
-            "bearer_token dict must contain 'from_step' or 'from_env'"
-        )
+        raise ValueError("bearer_token dict must contain 'from_step' or 'from_env'")
 
-    def _resolve_token_from_step(
-        self, step_id: str, bearer_token: dict[str, Any]
-    ) -> str:
+    def _resolve_token_from_step(self, step_id: str, bearer_token: dict[str, Any]) -> str:
         source = self._step_results.get(step_id)
         if source is None:
             raise ValueError(f"No stored step result found for '{step_id}'")
@@ -282,16 +276,12 @@ class ScenarioRunner:
 
         return str(token)
 
-    def _resolve_token_from_env(
-        self, env_var: str, bearer_token: dict[str, Any]
-    ) -> str:
+    def _resolve_token_from_env(self, env_var: str, bearer_token: dict[str, Any]) -> str:
         import os
 
         token = os.environ.get(env_var)
         if not token:
-            raise ValueError(
-                f"Environment variable '{env_var}' is not set or is empty"
-            )
+            raise ValueError(f"Environment variable '{env_var}' is not set or is empty")
         return token
 
     def _default_mcp_url(self, action: str) -> str:

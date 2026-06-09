@@ -266,10 +266,6 @@ def test_resolve_bearer_token_from_env_raises_on_missing() -> None:
     """from_env raises when the environment variable is not set."""
     import os
 
-    from mcp_conformance.runner import ScenarioRunner
-    from mcp_conformance.scenario.models import StepDef, StepType
-    from mcp_conformance.partners.base import TestPartner, AuthStep, FaultConfig, MCPResponse
-
     key = "MCP_CONFORMANCE_MISSING_VAR_29134"
     if key in os.environ:
         del os.environ[key]
@@ -279,14 +275,19 @@ def test_resolve_bearer_token_from_env_raises_on_missing() -> None:
 
         async def health(self) -> bool:
             return True
-        async def send_mcp_request(self, *a, **kw) -> MCPResponse:
+
+        async def send_mcp_request(self, *a: Any, **kw: Any) -> MCPResponse:
             return MCPResponse(status=200, headers={}, body={})
+
         async def send_auth_request(self, step: AuthStep) -> MCPResponse:
             return MCPResponse(status=200, headers={}, body={})
+
         async def reset_state(self) -> None:
             pass
+
         async def get_debug_state(self, endpoint: str) -> dict:
             return {}
+
         async def configure_injection(self, fault: FaultConfig) -> None:
             pass
 
@@ -299,8 +300,6 @@ def test_resolve_bearer_token_from_env_raises_on_missing() -> None:
         request={"method": "tools/list", "params": {}},
         assert_=[],
     )
-
-    import pytest
 
     with pytest.raises(ValueError, match=key):
         runner._resolve_step_auth(step.auth)
