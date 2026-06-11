@@ -75,11 +75,18 @@ async def _run(args: argparse.Namespace) -> int:
     try:
         scenario_paths = _expand_scenario_paths(args.paths)
         scenarios = load_scenarios(scenario_paths)
+        scenarios = _filter_scenarios_for_partner(scenarios, args.partner)
         scenarios = _filter_scenarios(
             scenarios,
             [_normalize_capability(cap) for cap in args.include],
             [_normalize_capability(cap) for cap in args.exclude],
         )
+        if not scenarios:
+            print(
+                f"No scenarios matched partner '{args.partner}' and the selected filters.",
+                file=sys.stderr,
+            )
+            return int(ExitCode.CONFIG_ERROR)
     except Exception as exc:
         print(f"Failed to load scenarios: {exc}", file=sys.stderr)
         return int(ExitCode.CONFIG_ERROR)
@@ -215,6 +222,28 @@ def _filter_scenarios(
             if not any(cap in exclude for caps in scenario.capabilities.values() for cap in caps)
         ]
     return result
+
+
+def _filter_scenarios_for_partner(
+    scenarios: list[ScenarioDef],
+    partner_name: str,
+) -> list[ScenarioDef]:
+    return [scenario for scenario in scenarios if _scenario_matches_partner(scenario, partner_name)]
+
+
+def _scenario_matches_partner(scenario: ScenarioDef, partner_name: str) -> bool:
+    scenario_partner = str(scenario.partner.get("type", "")).strip()
+    if not scenario_partner:
+        return True
+    return scenario_partner in _partner_aliases(partner_name)
+
+
+def _partner_aliases(partner_name: str) -> set[str]:
+    aliases = {
+        "mcp-auth-test-server": {"mcp-auth-test-server", "mcp_auth_test_server"},
+        "generic-mcp": {"generic-mcp", "generic-mcp-server", "generic_mcp_server"},
+    }
+    return aliases.get(partner_name, {partner_name})
 
 
 def _build_partner(args: argparse.Namespace) -> object:

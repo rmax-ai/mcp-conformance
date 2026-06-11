@@ -6,8 +6,10 @@ from pathlib import Path
 
 from mcp_conformance.cli import (
     _filter_scenarios,
+    _filter_scenarios_for_partner,
     _format_report_comparison,
     _normalize_capability,
+    _partner_aliases,
     build_parser,
 )
 from mcp_conformance.scenario.models import ScenarioDef
@@ -40,6 +42,46 @@ def test_filter_scenarios_include_and_exclude() -> None:
 
     assert [scenario.id for scenario in included] == ["oauth"]
     assert [scenario.id for scenario in filtered] == ["oauth", "resources"]
+
+
+def test_filter_scenarios_for_partner_uses_declared_partner_type() -> None:
+    scenarios = [
+        ScenarioDef(
+            id="auth",
+            title="Auth",
+            partner={"type": "mcp_auth_test_server"},
+            steps=[],
+        ),
+        ScenarioDef(
+            id="generic",
+            title="Generic",
+            partner={"type": "generic_mcp_server"},
+            steps=[],
+        ),
+        ScenarioDef(
+            id="unscoped",
+            title="Unscoped",
+            steps=[],
+        ),
+    ]
+
+    auth_selected = _filter_scenarios_for_partner(scenarios, "mcp-auth-test-server")
+    generic_selected = _filter_scenarios_for_partner(scenarios, "generic-mcp")
+
+    assert [scenario.id for scenario in auth_selected] == ["auth", "unscoped"]
+    assert [scenario.id for scenario in generic_selected] == ["generic", "unscoped"]
+
+
+def test_partner_aliases_cover_cli_and_scenario_naming() -> None:
+    assert _partner_aliases("mcp-auth-test-server") == {
+        "mcp-auth-test-server",
+        "mcp_auth_test_server",
+    }
+    assert _partner_aliases("generic-mcp") == {
+        "generic-mcp",
+        "generic-mcp-server",
+        "generic_mcp_server",
+    }
 
 
 def test_normalize_capability_strips_prefix() -> None:

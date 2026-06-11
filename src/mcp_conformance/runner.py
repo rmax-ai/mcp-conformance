@@ -6,7 +6,7 @@ import asyncio
 from enum import IntEnum
 from time import perf_counter
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from mcp_conformance.assertions.http import assert_json_path, assert_status
 from mcp_conformance.assertions.mcp import (
@@ -46,9 +46,9 @@ class ExitCode(IntEnum):
 
 
 _ACTION_MAPPING = {
-    "oauth.dcr.register": "/register",
-    "oauth.auth_code.authorize": "/authorize",
-    "oauth.token.exchange": "/token",
+    "oauth.dcr.register": "/oauth/register",
+    "oauth.auth_code.authorize": "/oauth/authorize",
+    "oauth.token.exchange": "/oauth/token",
     "oauth.discover": "/.well-known/oauth-authorization-server",
     "partner.health": "/health",
     "mcp.request": "/mcp/oauth",
@@ -78,7 +78,7 @@ class ScenarioRunner:
             result = await self._execute_step(i, step)
             step_results.append(result)
             if step.id and result.response is not None:
-                self._step_results[step.id] = result.response.get("body")
+                self._step_results[step.id] = result.response
             if not result.passed:
                 all_passed = False
                 break
@@ -147,7 +147,7 @@ class ScenarioRunner:
 
     async def _execute_client_request(self, step: StepDef) -> WireTrace:
         trace = WireTrace()
-        request = step.request or {}
+        request = self._resolve_step_request(step.request or {})
 
         if step.action == "partner.health":
             trace.request_method = "GET"
@@ -159,7 +159,7 @@ class ScenarioRunner:
 
         if step.action.startswith("oauth.") or step.action == "test.tokens.mint_expired":
             method = _default_http_method(step)
-            params, body = _resolve_auth_request_payload(step)
+            params, body = _resolve_auth_request_payload(step.action, request)
             path = _build_url(_action_to_url(step.action), params)
             trace.request_method = method
             trace.request_url = self._full_url(path)
@@ -229,6 +229,9 @@ class ScenarioRunner:
 
         raise ValueError(f"Unsupported action '{step.action}'")
 
+    def _resolve_step_request(self, request: dict[str, Any]) -> dict[str, Any]:
+        return self._resolve_references(request)
+
     def _resolve_step_auth(self, auth: dict[str, Any] | None) -> dict[str, Any] | None:
         if not auth:
             return auth
@@ -265,14 +268,13 @@ class ScenarioRunner:
         raise ValueError("bearer_token dict must contain 'from_step' or 'from_env'")
 
     def _resolve_token_from_step(self, step_id: str, bearer_token: dict[str, Any]) -> str:
-        source = self._step_results.get(step_id)
-        if source is None:
-            raise ValueError(f"No stored step result found for '{step_id}'")
-
-        path = bearer_token.get("path", "$.access_token")
-        token = _extract_path_value(source, path)
+        token = self._resolve_step_reference(
+            bearer_token,
+            default_path="$.access_token",
+        )
         if not token:
-            raise ValueError(f"No bearer token found at path '{path}' in step '{step_id}'")
+            step_path = bearer_token.get("path", "$.access_token")
+            raise ValueError(f"No bearer token found at path '{step_path}' in step '{step_id}'")
 
         return str(token)
 
@@ -300,6 +302,53 @@ class ScenarioRunner:
         if not base_url:
             return path
         return f"{base_url.rstrip('/')}{path}"
+
+    def _resolve_references(self, value: Any) -> Any:
+        if isinstance(value, dict):
+            if "from_step" in value:
+                return self._resolve_step_reference(value)
+            return {key: self._resolve_references(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [self._resolve_references(item) for item in value]
+        return value
+
+    def _resolve_step_reference(
+        self,
+        reference: dict[str, Any],
+        *,
+        default_path: str | None = None,
+    ) -> Any:
+        step_id = reference.get("from_step")
+        if not isinstance(step_id, str) or not step_id:
+            raise ValueError("step reference must include a non-empty 'from_step'")
+
+        response = self._step_results.get(step_id)
+        if response is None:
+            raise ValueError(f"No stored step result found for '{step_id}'")
+
+        header_name = reference.get("header")
+        query_param = reference.get("query_param")
+        path = reference.get("path", default_path)
+
+        if header_name is not None:
+            header_value = _get_header_value(response.get("headers", {}), str(header_name))
+            if query_param is None:
+                return header_value
+            if header_value is None:
+                return None
+            return _extract_query_param(str(header_value), str(query_param))
+
+        if path is None:
+            return response.get("body")
+
+        if isinstance(path, str) and path.startswith("$.headers."):
+            header_lookup = path.removeprefix("$.headers.")
+            return _get_header_value(response.get("headers", {}), header_lookup)
+
+        if isinstance(path, str) and path.startswith("$.body."):
+            return _extract_path_value(response.get("body"), f"$.{path.removeprefix('$.body.')}")
+
+        return _extract_path_value(response.get("body"), str(path))
 
 
 def _action_to_url(action: str) -> str:
@@ -367,13 +416,14 @@ def _default_http_method(step: StepDef) -> str:
     return "POST"
 
 
-def _resolve_auth_request_payload(step: StepDef) -> tuple[dict[str, Any], Any]:
-    request = step.request or {}
-    if step.action == "oauth.auth_code.authorize":
+def _resolve_auth_request_payload(action: str, request: dict[str, Any]) -> tuple[dict[str, Any], Any]:
+    if action == "oauth.auth_code.authorize":
         params = request.get("params")
         if params is None:
             params = request.get("json", request.get("body", {}))
         return dict(params or {}), None
+    if action == "oauth.token.exchange":
+        return dict(request.get("params", {})), request.get("form", request.get("json", request.get("body")))
     return dict(request.get("params", {})), request.get("json", request.get("body"))
 
 
@@ -409,6 +459,22 @@ def _extract_path_value(data: Any, path: str) -> Any:
         if current is None:
             return None
     return current
+
+
+def _get_header_value(headers: dict[str, Any], name: str) -> Any:
+    target = name.lower()
+    for header_name, header_value in headers.items():
+        if header_name.lower() == target:
+            return header_value
+    return None
+
+
+def _extract_query_param(url: str, name: str) -> str | None:
+    query = parse_qs(urlparse(url).query, keep_blank_values=True)
+    values = query.get(name)
+    if not values:
+        return None
+    return values[0]
 
 
 def _populate_trace_from_response(trace: WireTrace, response: Any) -> None:

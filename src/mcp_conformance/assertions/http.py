@@ -19,7 +19,7 @@ def assert_header_present(
 ) -> list[str]:
     """Assert a header exists and optionally matches a regex pattern."""
     headers = response.get("headers", {})
-    actual = headers.get(header)
+    actual = _get_header_value(headers, header)
     if actual is None:
         return [f"Missing header '{header}'"]
     if pattern and pattern not in str(actual):
@@ -36,3 +36,11 @@ def assert_json_path(response: dict[str, Any], path: str, expected: Any = None) 
             if actual_error != expected:
                 return [f"Expected error '{expected}', got '{actual_error}'"]
     return []
+
+
+def _get_header_value(headers: dict[str, Any], name: str) -> Any:
+    target = name.lower()
+    for header_name, header_value in headers.items():
+        if header_name.lower() == target:
+            return header_value
+    return None
