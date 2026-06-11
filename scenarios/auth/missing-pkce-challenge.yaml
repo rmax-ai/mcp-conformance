@@ -10,14 +10,33 @@ capabilities:
 partner:
   type: mcp_auth_test_server
 steps:
+  - id: register
+    type: client_request
+    action: oauth.dcr.register
+    request:
+      json:
+        client_name: "missing pkce client"
+        redirect_uris:
+          - "http://127.0.0.1:9999/callback"
+        grant_types:
+          - authorization_code
+        response_types:
+          - code
+        token_endpoint_auth_method: "none"
+    assert:
+      - type: status
+        expected: [200, 201]
   - id: authorize_no_pkce
     type: client_request
     action: oauth.auth_code.authorize
     request:
       json:
         response_type: "code"
-        client_id: "test-client"
+        client_id:
+          from_step: register
+          path: "$.client_id"
         redirect_uri: "http://127.0.0.1:9999/callback"
+        resource: "http://127.0.0.1:8765/mcp/oauth"
     assert:
       - type: status
-        expected: [400, 302]
+        expected: [400]

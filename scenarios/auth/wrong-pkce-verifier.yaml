@@ -10,30 +10,58 @@ capabilities:
 partner:
   type: mcp_auth_test_server
 steps:
+  - id: register
+    type: client_request
+    action: oauth.dcr.register
+    request:
+      json:
+        client_name: "wrong verifier client"
+        redirect_uris:
+          - "http://127.0.0.1:9876/callback"
+        grant_types:
+          - authorization_code
+        response_types:
+          - code
+        token_endpoint_auth_method: "none"
+    assert:
+      - type: status
+        expected: [200, 201]
   - id: authorize
     type: client_request
     action: oauth.auth_code.authorize
     request:
       params:
         response_type: "code"
-        client_id: "test-client"
+        client_id:
+          from_step: register
+          path: "$.client_id"
         redirect_uri: "http://127.0.0.1:9876/callback"
+        resource: "http://127.0.0.1:8765/mcp/oauth"
         code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
         code_challenge_method: "S256"
         state: "abc123"
+        approval_mode: "auto_approve"
     assert:
       - type: status
-        expected: [200, 302]
+        expected: [302]
   - id: exchange_wrong_verifier
     type: client_request
     action: oauth.token.exchange
     request:
-      json:
+      headers:
+        content-type: "application/x-www-form-urlencoded"
+      form:
         grant_type: "authorization_code"
-        code: "test-code"
+        code:
+          from_step: authorize
+          header: "location"
+          query_param: "code"
         redirect_uri: "http://127.0.0.1:9876/callback"
         code_verifier: "wrong-verifier-value"
-        client_id: "test-client"
+        client_id:
+          from_step: register
+          path: "$.client_id"
+        resource: "http://127.0.0.1:8765/mcp/oauth"
     assert:
       - type: status
         expected: 400

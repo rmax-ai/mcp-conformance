@@ -42,11 +42,57 @@ steps:
     request:
       params:
         response_type: "code"
-        client_id: "test-client"
+        client_id:
+          from_step: register
+          path: "$.client_id"
         redirect_uri: "http://127.0.0.1:9876/callback"
+        resource: "http://127.0.0.1:8765/mcp/oauth"
         code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
         code_challenge_method: "S256"
         state: "xyz789"
+        approval_mode: "auto_approve"
     assert:
       - type: status
-        expected: [200, 302]
+        expected: [302]
+      - type: redirect_location_contains
+        expected: "code="
+  - id: exchange
+    type: client_request
+    action: oauth.token.exchange
+    request:
+      headers:
+        content-type: "application/x-www-form-urlencoded"
+      form:
+        grant_type: "authorization_code"
+        code:
+          from_step: authorize
+          header: "location"
+          query_param: "code"
+        redirect_uri: "http://127.0.0.1:9876/callback"
+        code_verifier: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+        client_id:
+          from_step: register
+          path: "$.client_id"
+        resource: "http://127.0.0.1:8765/mcp/oauth"
+    assert:
+      - type: status
+        expected: 200
+      - type: response_contains_keys
+        expected:
+          - access_token
+          - token_type
+  - id: list_tools
+    type: client_request
+    action: mcp.request
+    auth:
+      bearer_token:
+        from_step: exchange
+        path: "$.access_token"
+    request:
+      method: tools/list
+      params: {}
+    assert:
+      - type: status
+        expected: 200
+      - type: jsonrpc_version
+      - type: result_exists

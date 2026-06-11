@@ -17,6 +17,7 @@ steps:
         response_type: "code"
         client_id: "http://127.0.0.1:8765/test/cimd/mismatched.json"
         redirect_uri: "http://127.0.0.1:9876/callback"
+        resource: "http://127.0.0.1:8765/mcp/oauth"
         code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
         code_challenge_method: "S256"
         state: "cimd789"

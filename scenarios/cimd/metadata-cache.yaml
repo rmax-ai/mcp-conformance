@@ -17,12 +17,30 @@ steps:
         response_type: "code"
         client_id: "http://127.0.0.1:8765/test/cimd/valid.json"
         redirect_uri: "http://127.0.0.1:9876/callback"
+        resource: "http://127.0.0.1:8765/mcp/oauth"
         code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
         code_challenge_method: "S256"
         state: "cache001"
+        approval_mode: "auto_approve"
     assert:
       - type: status
-        expected: [200, 302]
+        expected: [302]
+  - id: cimd_second_request
+    type: client_request
+    action: oauth.auth_code.authorize
+    request:
+      params:
+        response_type: "code"
+        client_id: "http://127.0.0.1:8765/test/cimd/valid.json"
+        redirect_uri: "http://127.0.0.1:9876/callback"
+        resource: "http://127.0.0.1:8765/mcp/oauth"
+        code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+        code_challenge_method: "S256"
+        state: "cache002"
+        approval_mode: "auto_approve"
+    assert:
+      - type: status
+        expected: [302]
   - id: debug_cimd_cache
     type: log_debug
     endpoint: "/debug/clients"

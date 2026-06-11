@@ -19,7 +19,7 @@ steps:
         audience: "http://127.0.0.1:8765/mcp/oauth"
     assert:
       - type: status
-        expected: 201
+        expected: 200
   - id: call_with_unknown_scope
     type: client_request
     action: mcp.request
@@ -32,3 +32,6 @@ steps:
     assert:
       - type: status
         expected: [401, 403]
+      - type: header
+        name: "WWW-Authenticate"
+        matches: "Bearer"

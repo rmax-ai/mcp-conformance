@@ -21,7 +21,7 @@ steps:
         audience: "http://127.0.0.1:8765/mcp/oauth"
     assert:
       - type: status
-        expected: 201
+        expected: 200
       - type: response_contains_keys
         expected:
           - access_token
@@ -39,3 +39,6 @@ steps:
     assert:
       - type: status
         expected: 401
+      - type: header
+        name: "WWW-Authenticate"
+        matches: "Bearer"

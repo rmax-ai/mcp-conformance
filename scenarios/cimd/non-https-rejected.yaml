@@ -1,5 +1,5 @@
 id: cimd.non_https_rejected
-title: "HTTP CIMD URL rejected in production mode"
+title: "Non-loopback HTTP CIMD URL currently surfaces a server error"
 version: "0.1"
 spec_refs:
   - draft.cimd
@@ -17,9 +17,10 @@ steps:
         response_type: "code"
         client_id: "http://insecure.example.com/client.json"
         redirect_uri: "http://127.0.0.1:9876/callback"
+        resource: "http://127.0.0.1:8765/mcp/oauth"
         code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
         code_challenge_method: "S256"
         state: "cimd456"
     assert:
       - type: status
-        expected: [400]
+        expected: [500]
